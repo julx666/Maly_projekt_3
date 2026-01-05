@@ -3,7 +3,7 @@ import pandas as pd
 
 def load_data(filepath='pm25_cleaned.csv'):
     """Wczytuje dane z pliku CSV."""
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(filepath, low_memory=False)
     df['data'] = pd.to_datetime(df['data'], errors='coerce')
     return df
 
@@ -26,7 +26,7 @@ def calculate_daily_stats(df, norm_threshold=15):
 
 def calculate_monthly_stats(df):
     """Oblicza średnie miesięczne."""
-    df['rok'] = df['data'].dt.year
+    df['rok'] = df['data'].dt.year.astype('Int64')
     df['miesiac'] = df['data'].dt.month
 
     monthly = (
@@ -44,7 +44,7 @@ def merge_stats(df, daily, monthly):
     """Łączy średnie dobowe i miesięczne z oryginalnym DataFrame."""
     # Klucze czasowe
     df['data_dzien'] = df['data'].dt.floor('D')
-    df['rok'] = df['data'].dt.year
+    df['rok'] = df['data'].dt.year.astype('Int64')
     df['miesiac'] = df['data'].dt.month
 
     # Merge średnich dobowych
@@ -65,16 +65,3 @@ def merge_stats(df, daily, monthly):
 
 def save_to_csv(df, filepath='pm25_cleaned.csv'):
     df.to_csv(filepath, index=False)
-
-def main():
-    df = load_data('pm25_cleaned.csv')
-
-    daily = calculate_daily_stats(df)
-    monthly = calculate_monthly_stats(df)
-
-    df_updated = merge_stats(df, daily, monthly)
-
-    save_to_csv(df_updated)
-
-if __name__ == '__main__':
-    main()

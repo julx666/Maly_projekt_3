@@ -5,38 +5,13 @@ import io
 import re
 
 
-# URL-e do pobierania danych
-GIOS_ARCHIVE_URL = "https://powietrze.gios.gov.pl/pjp/archives/downloadFile/"
-METADATA_URL = "https://powietrze.gios.gov.pl/pjp/archives/downloadFile/622"
-
-# Słownik konfiguracyjny
-YEAR_CONFIG = {
-    2015: {
-        'archive_id': '236',
-        'pm25_filename': '2015_PM25_1g.xlsx'
-    },
-    2018: {
-        'archive_id': '603',
-        'pm25_filename': '2018_PM25_1g.xlsx'
-    },
-    2021: {
-        'archive_id': '486',
-        'pm25_filename': '2021_PM25_1g.xlsx'
-    },
-    2024: {
-        'archive_id': '582',
-        'pm25_filename': '2024_PM25_1g.xlsx'
-    }
-}
-
-
-def download_gios_archive(year, config):
+def download_gios_archive(year, config, gios_archive_url="https://powietrze.gios.gov.pl/pjp/archives/downloadFile/"):
     """Pobiera archiwum ZIP z danymi pomiarowymi dla danego roku."""
     archive_id = config['archive_id']
     filename = config['pm25_filename']
     
     # Pobranie archiwum ZIP do pamięci
-    url = f"{GIOS_ARCHIVE_URL}{archive_id}"
+    url = f"{gios_archive_url}{archive_id}"
     
     try:
         response = requests.get(url)
@@ -62,10 +37,9 @@ def download_gios_archive(year, config):
         return None
 
 
-def download_metadata(metadata_url=METADATA_URL):
+def download_metadata(metadata_url="https://powietrze.gios.gov.pl/pjp/archives/downloadFile/622"):
     """Pobiera metadane i zwraca je jako DataFrame."""
     try:
-        print(f"Pobieranie metadanych...")
         response = requests.get(metadata_url)
         response.raise_for_status()  # jeśli błąd HTTP, zatrzymaj
         
@@ -250,83 +224,3 @@ def save_cleaned_data(df_all, output_path='pm25_cleaned.csv'):
     df_all.to_csv(output_path)
     print(f"Dane zapisane do: {output_path}")
     return output_path
-
-
-def main(years_to_process=None):
-    """Główna funkcja wykonująca cały proces pobierania i czyszczenia danych."""
-    print("=== Rozpoczynanie procesu pobierania i czyszczenia danych PM2.5 ===")
-    
-    # Jeśli nie podano lat, użyj wszystkich z konfiguracji
-    if years_to_process is None:
-        years_to_process = list(YEAR_CONFIG.keys())
-    
-    # Pobieranie metadanych
-    df_metadata = download_metadata()
-    if df_metadata is None:
-        print("Nie udało się pobrać metadanych. Kończenie pracy.")
-        return None
-    
-    # Pobieranie i czyszczenie danych dla każdego roku
-    print(f"\nPrzetwarzanie lat: {years_to_process}")
-    cleaned_data_dict = {}
-    
-    for year in years_to_process:
-        if year not in YEAR_CONFIG:
-            print(f"Ostrzeżenie: Brak konfiguracji dla roku {year}.")
-            continue
-        
-        print(f"\nPrzetwarzanie roku {year}")
-        
-        # Pobierz dane
-        df_raw = download_gios_archive(year, YEAR_CONFIG[year])
-        if df_raw is None:
-            print(f"Nie udało się pobrać danych dla roku {year}.")
-            continue
-        
-        # Oczyść dane
-        try:
-            df_clean = clean_data(df_raw, year, df_metadata)
-            cleaned_data_dict[year] = df_clean
-        except Exception as e:
-            print(f"Błąd podczas czyszczenia danych dla roku {year}: {e}")
-            continue
-    
-    # Sprawdź czy mamy dane do połączenia
-    if not cleaned_data_dict:
-        print("Brak danych do połączenia. Kończenie pracy.")
-        return None
-    
-    # Znajdź wspólne stacje
-    common_stations = get_common_stations(cleaned_data_dict)
-    
-    # Połącz dane z wszystkich lat
-    all_data_frames = list(cleaned_data_dict.values())
-    df_all = pd.concat(all_data_frames, ignore_index=True)
-    
-    # Filtruj tylko wspólne stacje
-    if common_stations:
-        initial_count = len(df_all)
-        df_all = df_all[df_all['kod_stacji'].isin(common_stations)]
-        filtered_count = initial_count - len(df_all)
-        print(f"Usunięto {filtered_count} pomiarów z nie-wspólnych stacji")
-    
-    # Zapis do pliku
-    output_file = save_cleaned_data(df_all)
-    
-    # Podsumowanie
-    print("\n=== PODSUMOWANIE ===")
-    print(f"Przetworzone lata: {list(cleaned_data_dict.keys())}")
-    print(f"Liczba wspólnych stacji: {len(common_stations)}")
-    print(f"Całkowita liczba pomiarów: {df_all.shape[0]}")
-    print(f"Zakres dat: {df_all['data'].min().date()} - {df_all['data'].max().date()}")
-    print(f"Plik wynikowy: {output_file}")
-    
-    # Przykładowe dane
-    print("\nPrzykładowe dane:")
-    print(df_all.head())
-    
-    return df_all
-
-
-if __name__ == "__main__":
-    cleaned_data = main()

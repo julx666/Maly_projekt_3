@@ -20,7 +20,7 @@ def calculate_daily_stats(df, norm_threshold=15):
     )
 
     daily.rename(columns={'pm25': 'pm25_srednia_dobowa'}, inplace=True)
-    daily['przekroczenie_normy'] = daily['pm25_srednia_dobowa'] > norm_threshold
+    daily['przekroczenie_normy'] = daily['pm25_srednia_dobowa'] >= norm_threshold
 
     return daily
 

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colormaps
 import seaborn as sns
+from data_analysis import get_voivodeship_mapping
 
 
 def plot_monthly_trends(df):
@@ -123,11 +124,12 @@ def days_over_norm(df):
     # Zlicz dni powyżej normy dla każdej stacji i roku
     dni_powyzej_normy = (
         df[df['przekroczenie_normy'] == True]
+        .drop_duplicates(subset=['kod_stacji', 'Miejscowość', 'rok', 'data_dzien'])
         .groupby(['kod_stacji', 'Miejscowość', 'rok'])
         .size()
         .reset_index(name='dni_powyzej_normy')
     )
-    
+
     dni_powyzej_normy['rok'] = dni_powyzej_normy['rok'].astype(int)
     
     # Znajdź top 3 i bottom 3 stacje z 2024 roku
@@ -159,3 +161,35 @@ def days_over_norm(df):
     plt.tight_layout()
     plt.show()
     
+def days_over_norm_by_voivodeship(df, df_metadata):
+    """Rysuje wykres słupkowy liczby dni z przekroczeniem normy PM2.5 dla województw."""
+
+    # Przypisz województwa do kodów stacji
+    voivodenship_mapping = get_voivodeship_mapping(df_metadata)
+    df = df.copy()
+    df['Województwo'] = df['kod_stacji'].map(voivodenship_mapping)
+
+    # Czy w danym województwie danego dnia było przekroczenie
+    woj_dzien = (
+        df.groupby(['Województwo', 'rok', 'data_dzien'])['przekroczenie_normy']
+        .any()  # co najmniej jedna stacja
+        .reset_index()
+    )
+
+    # Zlicz dni z przekroczeniem
+    woj_agg = (
+        woj_dzien[woj_dzien['przekroczenie_normy']]
+        .groupby(['Województwo', 'rok'])
+        .size()
+        .reset_index(name='dni_powyzej_normy')
+    )
+    # Rysuj wykres
+    plt.figure(figsize=(14, 6))
+    sns.barplot(data=woj_agg, x='Województwo', y='dni_powyzej_normy', hue='rok')
+    plt.xlabel('Województwo', weight='bold', fontsize=11)
+    plt.xticks(rotation=45, ha='right')
+    plt.ylabel('Dni powyżej normy (>15 μg/m^3)', weight='bold', fontsize=11)
+    plt.title('Liczba dni z przekroczeniem normy (15 μg/m^3) według województw', weight='bold', fontsize=14)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

@@ -65,3 +65,12 @@ def merge_stats(df, daily, monthly):
 
 def save_to_csv(df, filepath='pm25_cleaned.csv'):
     df.to_csv(filepath, index=False)
+
+def get_voivodeship_mapping(df_metadata):
+    """Tworzy mapowanie kodów stacji na województwa."""
+    if 'Kod stacji' in df_metadata.columns and 'Województwo' in df_metadata.columns:
+        df_metadata['Województwo'] = df_metadata['Województwo'].str.capitalize()
+        station_to_voivodeship = df_metadata.set_index('Kod stacji')['Województwo'].to_dict()
+        return station_to_voivodeship
+    else:
+        raise KeyError("Brak kolumny 'Kod stacji' lub 'Województwo' w metadanych")

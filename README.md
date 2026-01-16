@@ -1,6 +1,6 @@
 # Maly_projekt_3
 ## Notebooki
-###maly_projekt_1_fixed.ipynb
+### maly_projekt_1_fixed.ipynb
 Pobiera i czyści dane, oblicza statystyki, rysuje wykresy:
 * Wykres średniego miesięcznego stężenia PM2.5 dla Warszawy i Katowic w latach 2015 i 2024. 
 * Heatmapy średnich miesięcznych dla wybranych miast w latach 2015, 2018, 2021, 2024.

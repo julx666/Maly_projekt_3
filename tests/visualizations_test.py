@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg') #Włącza non-interactive mode w matplotlibie, zapobiega niepożądanym błędom wynikającym z niekompatybilności windows/linux 
+
 import pytest
 import pandas as pd
 import sys
@@ -51,3 +54,33 @@ def test_days_over_norm_runs(monkeypatch):
 
     monkeypatch.setattr("matplotlib.pyplot.show", lambda: None) # Zapobiega wyświetlaniu wykresu podczas testu
     days_over_norm(df)
+
+def test_days_over_norm_by_voivodeship(monkeypatch):
+    """Testuje, czy funkcja days_over_norm_by_voivodeship działa i wyświetla poprawne województwa."""
+    valid_list = {
+        'Dolnośląskie', 'Kujawsko-pomorskie', 'Lubelskie', 'Łódzkie', 'Lubuskie',
+        'Małopolskie', 'Mazowieckie', 'Opolskie', 'Podlaskie', 'Podkarpackie',
+        'Pomorskie', 'Świętokrzyskie', 'Śląskie', 'Warmińsko-mazurskie',
+        'Wielkopolskie', 'Zachodniopomorskie'
+    }
+
+    df_meta = pd.DataFrame({'Kod stacji': ['S1'], 'Województwo': ['Śląskie']})
+    df = pd.DataFrame({
+        "kod_stacji": ['S1'], "rok": [2024], "przekroczenie_normy": [True],
+        "data_dzien": ["2024-01-01"] 
+    })
+
+    def check_values(data, **kwargs): #sprawdza czy w pierwszej kolumnie podanej do plotowania województwa są poprawne
+        values = data.iloc[:, 0].unique()
+        
+        for name in values:
+            if name not in valid_list:
+                raise AssertionError(f"invalid Województwo: {name}")
+                
+        return plt.gca()
+
+    monkeypatch.setattr("seaborn.barplot", check_values)
+    monkeypatch.setattr("matplotlib.pyplot.show", lambda: None)
+    monkeypatch.setattr("matplotlib.pyplot.legend", lambda: None)
+    
+    days_over_norm_by_voivodeship(df, df_meta)
